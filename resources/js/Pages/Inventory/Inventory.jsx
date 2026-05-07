@@ -1,6 +1,6 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { Head } from '@inertiajs/react'
-import { Plus, UploadCloud, RefreshCw } from 'lucide-react'
+import { Plus, UploadCloud, RefreshCw, Maximize2, Minimize2 } from 'lucide-react'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Button }       from '@/components/ui/button'
 import { Pagination }   from '@/Components/Pagination'
@@ -36,16 +36,34 @@ export default function Inventory() {
     const [filters,    setFilters]    = useState(DEFAULT_FILTERS)
     const debouncedSearch = useDebounce(rawSearch, 400)
 
-    // Build the effective filters merging debounced search
     const effectiveFilters = { ...filters, search: debouncedSearch }
 
     // ── Selection state ───────────────────────────────────────────────────────
     const [selectedIds, setSelectedIds] = useState(new Set())
 
     // ── Modal / sheet state ───────────────────────────────────────────────────
-    const [sheetOpen,    setSheetOpen]    = useState(false)
-    const [editItem,     setEditItem]     = useState(null)
-    const [uploadOpen,   setUploadOpen]   = useState(false)
+    const [sheetOpen,  setSheetOpen]  = useState(false)
+    const [editItem,   setEditItem]   = useState(null)
+    const [uploadOpen, setUploadOpen] = useState(false)
+
+    // ── Fullscreen (native browser API) ──────────────────────────────────────
+    const tableRef = useRef(null)
+    const [isFullscreen, setIsFullscreen] = useState(false)
+
+    const toggleFullscreen = useCallback(() => {
+        if (!isFullscreen) {
+            tableRef.current?.requestFullscreen?.()
+        } else {
+            document.exitFullscreen?.()
+        }
+    }, [isFullscreen])
+
+    useEffect(() => {
+        const handler = () => setIsFullscreen(!!document.fullscreenElement)
+        const events = ['fullscreenchange', 'webkitfullscreenchange', 'msfullscreenchange']
+        events.forEach((e) => document.addEventListener(e, handler))
+        return () => events.forEach((e) => document.removeEventListener(e, handler))
+    }, [])
 
     // ── Stats refresh key ─────────────────────────────────────────────────────
     const [statsKey, setStatsKey] = useState(0)
@@ -55,18 +73,12 @@ export default function Inventory() {
     const { rows, meta, loading, error, refetch } = useInventoryData(effectiveFilters)
     const { stats, loading: statsLoading }         = useInventoryStats(statsKey)
 
-    // Row-level state for mutations (shared with hooks)
-    const [localRows, setLocalRows] = useState(rows)
-
-    // Keep localRows in sync when server data changes
-    // (we use `rows` directly — mutations update them optimistically)
-
     const {
         saving, uploading,
         createItem, updateItem, deleteItem, bulkDelete, bulkUpload,
     } = useInventoryMutations({
         rows,
-        setRows: () => refetch(),  // after mutation, re-fetch from server
+        setRows: () => refetch(),
         onRefreshStats: refreshStats,
     })
 
@@ -105,11 +117,7 @@ export default function Inventory() {
     // ── Selection helpers ─────────────────────────────────────────────────────
 
     const handleSelectAll = (checked) => {
-        if (checked) {
-            setSelectedIds(new Set(rows.map((r) => r.id)))
-        } else {
-            setSelectedIds(new Set())
-        }
+        setSelectedIds(checked ? new Set(rows.map((r) => r.id)) : new Set())
     }
 
     const handleSelectRow = (id, checked) => {
@@ -122,22 +130,12 @@ export default function Inventory() {
 
     // ── CRUD actions ──────────────────────────────────────────────────────────
 
-    const openAdd = () => {
-        setEditItem(null)
-        setSheetOpen(true)
-    }
-
-    const openEdit = (row) => {
-        setEditItem(row)
-        setSheetOpen(true)
-    }
+    const openAdd = () => { setEditItem(null); setSheetOpen(true) }
+    const openEdit = (row) => { setEditItem(row); setSheetOpen(true) }
 
     const handleFormSubmit = async (data) => {
-        if (editItem) {
-            await updateItem(editItem.id, data)
-        } else {
-            await createItem(data)
-        }
+        if (editItem) await updateItem(editItem.id, data)
+        else          await createItem(data)
         refetch()
     }
 
@@ -215,38 +213,63 @@ export default function Inventory() {
                 {/* ── Stats cards ── */}
                 <InventoryStats stats={stats} loading={statsLoading} />
 
-                {/* ── Filters ── */}
-                <InventoryFilters
-                    filters={{ ...filters, search: rawSearch }}
-                    onChange={handleFilterChange}
-                    onReset={handleReset}
-                />
-
-                {/* ── Error banner ── */}
-                {error && (
-                    <div className="rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-                        {error}
+                {/* ── Filters + fullscreen toggle ── */}
+                <div className="flex items-center gap-2">
+                    <div className="flex-1 min-w-0">
+                        <InventoryFilters
+                            filters={{ ...filters, search: rawSearch }}
+                            onChange={handleFilterChange}
+                            onReset={handleReset}
+                        />
                     </div>
-                )}
+                    <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={toggleFullscreen}
+                        title={isFullscreen ? 'Exit fullscreen (Esc)' : 'Fullscreen table'}
+                        className="shrink-0 h-9 w-9"
+                    >
+                        {isFullscreen
+                            ? <Minimize2 className="h-4 w-4" />
+                            : <Maximize2 className="h-4 w-4" />
+                        }
+                    </Button>
+                </div>
 
-                {/* ── Table ── */}
-                <div className="space-y-0">
-                    <InventoryTable
-                        rows={rows}
-                        loading={loading}
-                        sortBy={filters.sort_by}
-                        sortDir={filters.sort_dir}
-                        selectedIds={selectedIds}
-                        onSort={handleSort}
-                        onSelectAll={handleSelectAll}
-                        onSelectRow={handleSelectRow}
-                        onEdit={openEdit}
-                        onDelete={handleDelete}
-                        onUpdate={handleInlineUpdate}
-                        saving={saving}
-                    />
+                {/* ── Table section ── */}
+                <div
+                    ref={tableRef}
+                    className={isFullscreen
+                        ? 'bg-background flex flex-col h-full p-4 gap-3'
+                        : 'space-y-3'
+                    }
+                >
+                    {/* Error banner */}
+                    {error && (
+                        <div className="rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                            {error}
+                        </div>
+                    )}
 
-                    {/* ── Pagination ── */}
+                    {/* Table */}
+                    <div className={isFullscreen ? 'flex-1 overflow-auto min-h-0' : ''}>
+                        <InventoryTable
+                            rows={rows}
+                            loading={loading}
+                            sortBy={filters.sort_by}
+                            sortDir={filters.sort_dir}
+                            selectedIds={selectedIds}
+                            onSort={handleSort}
+                            onSelectAll={handleSelectAll}
+                            onSelectRow={handleSelectRow}
+                            onEdit={openEdit}
+                            onDelete={handleDelete}
+                            onUpdate={handleInlineUpdate}
+                            saving={saving}
+                        />
+                    </div>
+
+                    {/* Pagination */}
                     {meta && (
                         <Pagination
                             meta={meta}

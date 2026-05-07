@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(grep -E \"\\\\.\\(php|jsx\\)$\")"
+      "Bash(grep -E \"\\\\.\\(php|jsx\\)$\")",
+      "Bash(npm install:*)",
+      "Bash(composer require:*)",
+      "Bash(php artisan:*)"
     ]
   }
 }

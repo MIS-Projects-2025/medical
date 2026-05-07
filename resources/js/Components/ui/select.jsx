@@ -3,28 +3,40 @@ import { ChevronDown, Check } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 /**
- * Custom Select — provides the same named exports as the Radix-UI ShadCN Select
- * (Select, SelectTrigger, SelectValue, SelectContent, SelectItem, SelectGroup, SelectLabel)
- * without requiring @radix-ui/react-select.
+ * Custom Select — provides the same named exports as the Radix-UI ShadCN Select.
+ *
+ * How label resolution works:
+ *   Each SelectItem registers its value→label pair into a ref on mount.
+ *   SelectContent always renders (hidden via CSS when closed) so items are
+ *   always mounted and their labels are always registered — even before the
+ *   dropdown has been opened for the first time.
+ *   SelectValue reads from that registry to display the label, not the raw value.
  */
 
 const SelectContext = React.createContext(null)
 
 function Select({ value, defaultValue, onValueChange, children, disabled }) {
-  const [open, setOpen] = React.useState(false)
+  const [open, setOpen]                   = React.useState(false)
   const [internalValue, setInternalValue] = React.useState(defaultValue ?? "")
+  const [labelMap, setLabelMap]           = React.useState({})
   const containerRef = React.useRef(null)
 
   const currentValue = value !== undefined ? value : internalValue
 
-  const handleSelect = React.useCallback(
-    (v) => {
-      if (value === undefined) setInternalValue(v)
-      onValueChange?.(v)
-      setOpen(false)
-    },
-    [value, onValueChange]
-  )
+  // Called by each SelectItem on mount — triggers a re-render so SelectValue
+  // can resolve the label immediately, even before the dropdown is opened.
+  const registerLabel = React.useCallback((val, label) => {
+    setLabelMap((prev) => {
+      if (prev[String(val)] === label) return prev // skip if unchanged
+      return { ...prev, [String(val)]: label }
+    })
+  }, [])
+
+  const handleSelect = React.useCallback((v) => {
+    if (value === undefined) setInternalValue(v)
+    onValueChange?.(v)
+    setOpen(false)
+  }, [value, onValueChange])
 
   // Close on outside click
   React.useEffect(() => {
@@ -47,7 +59,7 @@ function Select({ value, defaultValue, onValueChange, children, disabled }) {
   }, [open])
 
   return (
-    <SelectContext.Provider value={{ open, setOpen, currentValue, handleSelect, disabled }}>
+    <SelectContext.Provider value={{ open, setOpen, currentValue, handleSelect, disabled, labelMap, registerLabel }}>
       <div ref={containerRef} className="relative inline-block w-full">
         {children}
       </div>
@@ -81,24 +93,33 @@ SelectTrigger.displayName = "SelectTrigger"
 function SelectValue({ placeholder }) {
   const ctx = React.useContext(SelectContext)
   if (!ctx) return null
+
+  const label = ctx.currentValue
+    ? (ctx.labelMap[String(ctx.currentValue)] ?? ctx.currentValue)
+    : null
+
   return (
-    <span className={cn(!ctx.currentValue && "text-muted-foreground")}>
-      {ctx.currentValue || placeholder || ""}
+    <span className={cn(!label && "text-muted-foreground")}>
+      {label || placeholder || ""}
     </span>
   )
 }
 
-const SelectContent = React.forwardRef(({ className, children, position = "popper", ...props }, ref) => {
+const SelectContent = React.forwardRef(({ className, children, ...props }, ref) => {
   const ctx = React.useContext(SelectContext)
-  if (!ctx?.open) return null
 
+  // Always render so SelectItems can register their labels on mount.
+  // Use `hidden` (display:none) instead of returning null — items stay mounted
+  // and labels stay registered even while the dropdown is closed.
   return (
     <div
       ref={ref}
       className={cn(
         "absolute z-50 min-w-[8rem] w-full overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md",
         "top-full mt-1 left-0",
-        "animate-in fade-in-0 zoom-in-95",
+        ctx?.open
+          ? "animate-in fade-in-0 zoom-in-95"
+          : "hidden",
         className
       )}
       {...props}
@@ -114,6 +135,14 @@ SelectContent.displayName = "SelectContent"
 const SelectItem = React.forwardRef(({ className, children, value, ...props }, ref) => {
   const ctx = React.useContext(SelectContext)
   const isSelected = ctx?.currentValue === value
+
+  // Register value→label so SelectValue can resolve the display text.
+  // Runs on mount and whenever value/children change.
+  React.useEffect(() => {
+    if (!ctx?.registerLabel) return
+    const label = typeof children === "string" ? children : String(value)
+    ctx.registerLabel(value, label)
+  }, [value, children]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div

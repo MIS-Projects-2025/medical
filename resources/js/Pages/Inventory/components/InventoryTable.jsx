@@ -348,11 +348,11 @@ export default function InventoryTable({
                                                 </Button>
                                             </div>
                                         ) : (
-                                            <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <div className="flex items-center justify-end gap-1">
                                                 <Button
                                                     size="icon"
                                                     variant="ghost"
-                                                    className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                                                    className="h-7 w-7 text-amber-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30"
                                                     onClick={() => onEdit(row)}
                                                     title="Open in editor"
                                                 >
@@ -361,7 +361,7 @@ export default function InventoryTable({
                                                 <Button
                                                     size="icon"
                                                     variant="ghost"
-                                                    className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                                                    className="h-7 w-7 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
                                                     onClick={() => {
                                                         if (confirm(`Delete "${row.item_name}"?`)) {
                                                             onDelete(row.id)
@@ -374,11 +374,11 @@ export default function InventoryTable({
                                                 <Button
                                                     size="icon"
                                                     variant="ghost"
-                                                    className="h-7 w-7 text-muted-foreground hover:text-blue-600"
+                                                    className="h-7 w-7 text-blue-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30"
                                                     onClick={() => startEdit(row)}
                                                     title="Quick edit (inline)"
                                                 >
-                                                    <Pencil className="h-3.5 w-3.5 opacity-60" />
+                                                    <Pencil className="h-3.5 w-3.5" />
                                                 </Button>
                                             </div>
                                         )}

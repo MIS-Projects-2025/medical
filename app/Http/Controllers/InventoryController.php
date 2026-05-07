@@ -91,21 +91,23 @@ class InventoryController extends Controller
         return response()->json(['deleted' => $count, 'message' => "{$count} item(s) deleted."]);
     }
 
-    /** POST /inventory/bulk-upload — import from CSV */
+    /** POST /inventory/bulk-upload — import from Excel (.xlsx/.xls) or CSV */
     public function bulkUpload(Request $request): JsonResponse
     {
         $request->validate([
-            'file' => ['required', 'file', 'mimes:csv,txt', 'max:5120'],
+            'file' => ['required', 'file', 'mimes:xlsx,xls,csv,txt', 'max:10240'],
         ]);
 
         try {
-            $result = $this->service->importCsv($request->file('file'));
+            $result = $this->service->import($request->file('file'));
             return response()->json([
                 'message' => "Import complete: {$result['created']} created, {$result['updated']} updated.",
                 ...$result,
             ]);
         } catch (\RuntimeException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
+        } catch (\Throwable $e) {
+            return response()->json(['message' => 'Failed to read file: ' . $e->getMessage()], 422);
         }
     }
 }

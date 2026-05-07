@@ -2,8 +2,10 @@
 
 namespace App\Services;
 
+use App\Imports\InventoryImport;
 use App\Repositories\InventoryRepository;
 use Illuminate\Http\UploadedFile;
+use Maatwebsite\Excel\Facades\Excel;
 
 class InventoryService
 {
@@ -56,52 +58,34 @@ class InventoryService
 
     public function bulkDelete(array $ids): int
     {
-        return $this->repository->bulkDelete(
-            array_map('intval', $ids)
-        );
+        return $this->repository->bulkDelete(array_map('intval', $ids));
     }
 
     // ── Import ────────────────────────────────────────────────────────────────
 
     /**
-     * Parse a CSV file and upsert rows into inventory.
-     * Expected columns: id (optional), med_type, item_name, brand, uom, qty, expiration
+     * Import inventory items from an Excel (.xlsx / .xls) or CSV file.
+     * Uses Maatwebsite\Excel which auto-detects the format from the extension.
+     * Row 1 must be the header row with column names matching TEMPLATE_COLUMNS.
      */
-    public function importCsv(UploadedFile $file): array
+    public function import(UploadedFile $file): array
     {
-        $handle = fopen($file->getRealPath(), 'r');
+        $import = new InventoryImport();
 
-        if ($handle === false) {
-            throw new \RuntimeException('Could not open uploaded file.');
+        Excel::import($import, $file);
+
+        if ($import->rows->isEmpty()) {
+            throw new \RuntimeException('No data rows found in the file. Make sure row 1 contains the header.');
         }
 
-        $headers = null;
-        $rows    = [];
-
-        while (($line = fgetcsv($handle)) !== false) {
-            if ($headers === null) {
-                $headers = array_map(fn($h) => strtolower(trim($h)), $line);
-                continue;
-            }
-
-            if (count($line) !== count($headers)) {
-                continue; // skip malformed rows
-            }
-
-            $row = array_combine($headers, $line);
-            $mapped = $this->mapImportRow($row);
-
-            if (empty($mapped['item_name'])) {
-                continue; // skip rows without a name
-            }
-
-            $rows[] = $mapped;
-        }
-
-        fclose($handle);
+        $rows = $import->rows
+            ->map(fn($row) => $this->mapImportRow($row->toArray()))
+            ->filter(fn($row) => !empty($row['item_name']))
+            ->values()
+            ->toArray();
 
         if (empty($rows)) {
-            throw new \RuntimeException('No valid rows found in the file. Check column headers and data.');
+            throw new \RuntimeException('No valid rows found. Ensure item_name is filled for each row.');
         }
 
         return $this->repository->upsertBatch($rows);
@@ -112,21 +96,20 @@ class InventoryService
     private function format($item): array
     {
         return [
-            'id'            => $item->id,
-            'med_type'      => $item->med_type,
-            'med_type_label'=> $item->med_type_label,
-            'item_name'     => $item->item_name,
-            'brand'         => $item->brand,
-            'uom'           => $item->uom,
-            'qty'           => $item->qty,
-            'expiration'    => $item->expiration?->format('Y-m-d'),
-            'date_inserted' => $item->date_inserted?->format('Y-m-d'),
-            'created_at'    => $item->created_at?->toIso8601String(),
-            'updated_at'    => $item->updated_at?->toIso8601String(),
+            'id'             => $item->id,
+            'med_type'       => $item->med_type,
+            'med_type_label' => $item->med_type_label,
+            'item_name'      => $item->item_name,
+            'brand'          => $item->brand,
+            'uom'            => $item->uom,
+            'qty'            => $item->qty,
+            'expiration'     => $item->expiration?->format('Y-m-d'),
+            'date_inserted'  => $item->date_inserted?->format('Y-m-d'),
+            'created_at'     => $item->created_at?->toIso8601String(),
+            'updated_at'     => $item->updated_at?->toIso8601String(),
         ];
     }
 
-    /** Strip to only fillable, safe fields */
     private function sanitize(array $data): array
     {
         return array_intersect_key($data, array_flip([
@@ -138,20 +121,30 @@ class InventoryService
     {
         static $typeMap = ['medicine' => 1, 'supply' => 2, 'equipment' => 3];
 
-        $medTypeRaw = strtolower(trim($row['med_type'] ?? ''));
+        // WithHeadingRow lowercases keys; handle both "med_type" and "type"
+        $medTypeRaw = strtolower(trim((string) ($row['med_type'] ?? '')));
         $medType    = $typeMap[$medTypeRaw] ?? (is_numeric($medTypeRaw) ? (int) $medTypeRaw : 1);
+
+        // Excel serial dates: PhpSpreadsheet returns them as integers — convert
+        $expiration = $row['expiration'] ?? null;
+        if (is_numeric($expiration) && $expiration > 1000) {
+            $expiration = \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject((float) $expiration)
+                ->format('Y-m-d');
+        } elseif (!empty($expiration)) {
+            $expiration = trim((string) $expiration);
+        } else {
+            $expiration = null;
+        }
 
         return array_filter([
             'id'            => isset($row['id']) && is_numeric($row['id']) ? (int) $row['id'] : null,
             'med_type'      => in_array($medType, [1, 2, 3], true) ? $medType : 1,
-            'item_name'     => trim($row['item_name'] ?? ''),
-            'brand'         => trim($row['brand']     ?? '') ?: null,
-            'uom'           => trim($row['uom']        ?? '') ?: null,
-            'qty'           => max(0, (int) ($row['qty'] ?? 0)),
-            'expiration'    => !empty($row['expiration']) ? trim($row['expiration']) : null,
-            'date_inserted' => !empty($row['date_inserted'])
-                                ? trim($row['date_inserted'])
-                                : now()->toDateString(),
+            'item_name'     => trim((string) ($row['item_name'] ?? '')),
+            'brand'         => trim((string) ($row['brand']     ?? '')) ?: null,
+            'uom'           => trim((string) ($row['uom']       ?? '')) ?: null,
+            'qty'           => max(0, (int) ($row['qty']        ?? 0)),
+            'expiration'    => $expiration,
+            'date_inserted' => now()->toDateString(),
         ], fn($v) => $v !== null && $v !== '');
     }
 }

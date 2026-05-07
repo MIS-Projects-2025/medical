@@ -62,23 +62,81 @@ export function isExpiringSoon(dateStr, days = 30) {
     return exp > now && exp <= soon
 }
 
-// ── CSV template download ─────────────────────────────────────────────────────
+// ── Excel template ────────────────────────────────────────────────────────────
 
-export function downloadCsvTemplate() {
-    const headers = ['id', 'med_type', 'item_name', 'brand', 'uom', 'qty', 'expiration']
-    const example = ['', '1', 'Paracetamol 500mg', 'Generic Brand', 'tablet', '100', '2026-12-31']
-    const note    = ['', '# med_type: 1=Medicine 2=Supply 3=Equipment', '', '', '', '', '']
+/**
+ * Column definitions — single source of truth used by:
+ *   1. downloadExcelTemplate() to build the .xlsx header row
+ *   2. BulkUploadModal ColumnReference table
+ */
+export const TEMPLATE_COLUMNS = [
+    { key: 'med_type',   label: 'Type',        required: true,  hint: '1 = Medicine   2 = Supply   3 = Equipment' },
+    { key: 'item_name',  label: 'Item Name',   required: true,  hint: 'Full name of the item (e.g. Paracetamol 500mg)' },
+    { key: 'brand',      label: 'Brand',       required: false, hint: 'Brand or manufacturer name' },
+    { key: 'uom',        label: 'Unit (UOM)',  required: false, hint: 'Unit of measure: tablet, capsule, bottle, box, pcs, ml…' },
+    { key: 'qty',        label: 'Quantity',    required: true,  hint: 'Whole number, 0 or more. Do not include commas.' },
+    { key: 'expiration', label: 'Expiration',  required: false, hint: 'YYYY-MM-DD format (e.g. 2027-06-30). Leave blank if no expiry.' },
+]
 
-    const rows = [headers, example, note]
-    const csv  = rows.map((r) => r.join(',')).join('\n')
+const SAMPLE_ROWS = [
+    // med_type | item_name                  | brand         | uom      | qty | expiration
+    [        1,  'Paracetamol 500mg',          'Biogesic',    'tablet',  200,  '2027-06-30' ],
+    [        1,  'Amoxicillin 500mg',          'Generic',     'capsule', 150,  '2026-12-31' ],
+    [        1,  'Mefenamic Acid 500mg',       'Ponstan',     'capsule', 100,  '2027-03-15' ],
+    [        2,  'Surgical Gloves (Large)',    '3M',          'box',      50,  ''           ],
+    [        2,  'Isopropyl Alcohol 70%',      'Green Cross', 'bottle',  100,  '2026-09-15' ],
+    [        2,  'Disposable Face Mask',       'Generic',     'box',      80,  ''           ],
+    [        3,  'Digital Thermometer',        'B.Well',      'unit',     10,  ''           ],
+    [        3,  'Blood Pressure Monitor',     'Omron',       'unit',      5,  '2028-01-01' ],
+]
 
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-    const url  = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href     = url
-    link.download = 'inventory_import_template.csv'
-    link.click()
-    URL.revokeObjectURL(url)
+const INSTRUCTIONS_ROWS = [
+    ['INVENTORY IMPORT — INSTRUCTIONS'],
+    [],
+    ['Column',      'Required', 'Description'],
+    ['med_type',    'Yes',      '1 = Medicine   2 = Supply   3 = Equipment'],
+    ['item_name',   'Yes',      'Full item name. Rows with a blank item_name are skipped.'],
+    ['brand',       'No',       'Brand or manufacturer name.'],
+    ['uom',         'No',       'Unit of measure — e.g. tablet, capsule, bottle, box, pcs, ml, unit.'],
+    ['qty',         'Yes',      'Whole number (0 or more). Do not include commas or unit labels.'],
+    ['expiration',  'No',       'Date in YYYY-MM-DD format (e.g. 2027-06-30). Leave blank if no expiry.'],
+    [],
+    ['IMPORTANT:'],
+    ['— Do not rename or reorder the header row.'],
+    ['— The first row of the "Inventory Data" sheet must always be the header row.'],
+    ['— med_type must be a number (1, 2, or 3), not the label text.'],
+]
+
+export async function downloadExcelTemplate() {
+    const XLSX = await import('xlsx')
+
+    const wb = XLSX.utils.book_new()
+
+    // ── Sheet 1: Inventory Data (headers + sample rows) ──────────────────────
+    const headers  = TEMPLATE_COLUMNS.map((c) => c.key)
+    const wsData   = XLSX.utils.aoa_to_sheet([headers, ...SAMPLE_ROWS])
+
+    // Column widths
+    wsData['!cols'] = [
+        { wch: 10 },   // med_type
+        { wch: 32 },   // item_name
+        { wch: 18 },   // brand
+        { wch: 12 },   // uom
+        { wch: 10 },   // qty
+        { wch: 14 },   // expiration
+    ]
+
+    // Freeze header row
+    wsData['!freeze'] = { xSplit: 0, ySplit: 1 }
+
+    XLSX.utils.book_append_sheet(wb, wsData, 'Inventory Data')
+
+    // ── Sheet 2: Instructions ─────────────────────────────────────────────────
+    const wsInstr = XLSX.utils.aoa_to_sheet(INSTRUCTIONS_ROWS)
+    wsInstr['!cols'] = [{ wch: 14 }, { wch: 10 }, { wch: 70 }]
+    XLSX.utils.book_append_sheet(wb, wsInstr, 'Instructions')
+
+    XLSX.writeFile(wb, 'inventory_import_template.xlsx')
 }
 
 // ── Form defaults ─────────────────────────────────────────────────────────────
