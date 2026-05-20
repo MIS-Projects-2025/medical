@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { History, Search, X, Plus, Pencil, Trash2, PackageMinus, RotateCcw } from 'lucide-react'
+import { usePage } from '@inertiajs/react'
+import { History, Search, X, Plus, Pencil, Trash2, PackageMinus, RotateCcw, Upload } from 'lucide-react'
 import {
     Dialog, DialogContent, DialogHeader,
     DialogTitle, DialogDescription,
@@ -23,6 +24,7 @@ const ACTION_CONFIG = {
     DELETED:  { label: 'Deleted',  Icon: Trash2,       dot: 'bg-red-500',     ring: 'ring-red-200 dark:ring-red-800',     iconBg: 'bg-red-100 dark:bg-red-950',     iconColor: 'text-red-600 dark:text-red-400',     badge: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-950/60 dark:text-red-400 dark:border-red-800'     },
     ISSUED:   { label: 'Issued',   Icon: PackageMinus, dot: 'bg-amber-500',   ring: 'ring-amber-200 dark:ring-amber-800', iconBg: 'bg-amber-100 dark:bg-amber-950', iconColor: 'text-amber-600 dark:text-amber-400', badge: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-950/60 dark:text-amber-400 dark:border-amber-800' },
     RESTORED: { label: 'Restored', Icon: RotateCcw,    dot: 'bg-violet-500',  ring: 'ring-violet-200 dark:ring-violet-800', iconBg: 'bg-violet-100 dark:bg-violet-950', iconColor: 'text-violet-600 dark:text-violet-400', badge: 'bg-violet-100 text-violet-700 border-violet-200 dark:bg-violet-950/60 dark:text-violet-400 dark:border-violet-800' },
+    IMPORTED: { label: 'Imported', Icon: Upload,       dot: 'bg-cyan-500',    ring: 'ring-cyan-200 dark:ring-cyan-800',   iconBg: 'bg-cyan-100 dark:bg-cyan-950',   iconColor: 'text-cyan-600 dark:text-cyan-400',   badge: 'bg-cyan-100 text-cyan-700 border-cyan-200 dark:bg-cyan-950/60 dark:text-cyan-400 dark:border-cyan-800'   },
 }
 
 const DEFAULT_CONFIG = { label: '—', Icon: History, dot: 'bg-muted-foreground', ring: 'ring-border', iconBg: 'bg-muted', iconColor: 'text-muted-foreground', badge: '' }
@@ -32,7 +34,7 @@ function getConfig(type) { return ACTION_CONFIG[type] ?? DEFAULT_CONFIG }
 // ── Format datetime ───────────────────────────────────────────────────────────
 
 function formatDateTime(iso) {
-    if (!iso) return '—'
+    if (!iso) return { date: '—', time: '' }
     const d = new Date(iso)
     return {
         date: d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }),
@@ -40,19 +42,49 @@ function formatDateTime(iso) {
     }
 }
 
+// ── Human-readable field name ────────────────────────────────────────────────
+
+const FIELD_LABELS = {
+    item_name:      'Item Name',
+    med_type:       'Type',
+    brand:          'Brand',
+    uom:            'UOM',
+    qty:            'Quantity',
+    required_stock: 'Req. Stock',
+    date_inserted:  'Date Added',
+}
+
+function fieldLabel(key) {
+    return FIELD_LABELS[key] ?? key.replace(/_/g, ' ')
+}
+
+// ── Format a single value for display ────────────────────────────────────────
+
+function formatValue(key, val, typeLabelMap = {}) {
+    if (val === null || val === undefined || val === '') return '—'
+    if (key === 'med_type') return typeLabelMap[Number(val)] ?? String(val)
+    return String(val)
+}
+
 // ── Changes section inside a log entry ───────────────────────────────────────
 
-function ChangesBlock({ oldValues, newValues, actionType }) {
-    if (actionType === 'CREATED') {
+function ChangesBlock({ oldValues, newValues, actionType, typeLabelMap }) {
+    if (actionType === 'CREATED' || actionType === 'IMPORTED') {
         if (!newValues || !Object.keys(newValues).length) return null
+        const displayFields = Object.keys(newValues).filter(
+            (k) => !['created_at', 'updated_at', 'date_inserted', 'loggable_type', 'loggable_id'].includes(k)
+        )
+        if (!displayFields.length) return null
         return (
             <div className="mt-2 rounded-md border bg-muted/30 p-3 text-xs space-y-1">
-                <p className="font-medium text-muted-foreground uppercase tracking-wide text-[10px] mb-1.5">Initial values</p>
+                <p className="font-medium text-muted-foreground uppercase tracking-wide text-[10px] mb-1.5">
+                    {actionType === 'IMPORTED' ? 'Imported values' : 'Initial values'}
+                </p>
                 <div className="grid grid-cols-2 gap-x-6 gap-y-1">
-                    {Object.entries(newValues).map(([k, v]) => (
+                    {displayFields.map((k) => (
                         <div key={k} className="flex gap-1.5">
-                            <span className="text-muted-foreground shrink-0 capitalize">{k.replace(/_/g, ' ')}:</span>
-                            <span className="font-medium truncate">{String(v ?? '—')}</span>
+                            <span className="text-muted-foreground shrink-0">{fieldLabel(k)}:</span>
+                            <span className="font-medium truncate">{formatValue(k, newValues[k], typeLabelMap)}</span>
                         </div>
                     ))}
                 </div>
@@ -61,17 +93,19 @@ function ChangesBlock({ oldValues, newValues, actionType }) {
     }
 
     if (actionType === 'UPDATED' && oldValues && typeof oldValues === 'object') {
-        const fields = Object.keys(oldValues)
+        const fields = Object.keys(oldValues).filter(
+            (k) => !['updated_at'].includes(k)
+        )
         if (!fields.length) return null
         return (
             <div className="mt-2 rounded-md border bg-muted/30 p-3 text-xs space-y-1.5">
                 <p className="font-medium text-muted-foreground uppercase tracking-wide text-[10px] mb-1.5">Changes</p>
                 {fields.map((f) => (
                     <div key={f} className="flex items-start gap-1.5 flex-wrap">
-                        <span className="text-muted-foreground capitalize shrink-0 min-w-16">{f.replace(/_/g, ' ')}:</span>
-                        <span className="line-through text-destructive/70 dark:text-red-400/70">{String(oldValues[f] ?? '')}</span>
+                        <span className="text-muted-foreground capitalize shrink-0 min-w-20">{fieldLabel(f)}:</span>
+                        <span className="line-through text-destructive/70 dark:text-red-400/70">{formatValue(f, oldValues[f], typeLabelMap)}</span>
                         <span className="text-muted-foreground">→</span>
-                        <span className="font-medium text-foreground">{String(newValues?.[f] ?? '')}</span>
+                        <span className="font-medium text-foreground">{formatValue(f, newValues?.[f], typeLabelMap)}</span>
                     </div>
                 ))}
             </div>
@@ -105,10 +139,16 @@ function ChangesBlock({ oldValues, newValues, actionType }) {
 
 // ── Single timeline entry ─────────────────────────────────────────────────────
 
-function TimelineEntry({ log, isLast }) {
+function TimelineEntry({ log, isLast, typeLabelMap }) {
     const cfg = getConfig(log.action_type)
     const { Icon } = cfg
     const dt = formatDateTime(log.action_at)
+
+    // Display name: prefer metadata.emp_name, fall back to action_by (emp_id)
+    const displayName = log.action_by_name || log.action_by
+
+    // Upload session reference
+    const isFromUpload = log.related_type === 'UploadSession' && log.related_id
 
     return (
         <div className="flex gap-4">
@@ -134,8 +174,18 @@ function TimelineEntry({ log, isLast }) {
                         >
                             {cfg.label}
                         </Badge>
-                        {log.action_by && (
-                            <span className="text-sm font-medium text-foreground">{log.action_by}</span>
+                        {displayName && (
+                            <div className="flex flex-col leading-tight">
+                                <span className="text-sm font-medium text-foreground">{displayName}</span>
+                                {log.action_by_name && log.action_by && (
+                                    <span className="text-[10px] text-muted-foreground">{log.action_by}</span>
+                                )}
+                            </div>
+                        )}
+                        {isFromUpload && (
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-cyan-600 border-cyan-300 bg-cyan-50 dark:bg-cyan-950/30 dark:text-cyan-400 dark:border-cyan-800">
+                                Upload #{log.related_id}
+                            </Badge>
                         )}
                     </div>
                     <div className="text-right shrink-0">
@@ -154,6 +204,7 @@ function TimelineEntry({ log, isLast }) {
                     oldValues={log.old_values}
                     newValues={log.new_values}
                     actionType={log.action_type}
+                    typeLabelMap={typeLabelMap}
                 />
             </div>
         </div>
@@ -188,6 +239,8 @@ function SkeletonEntries() {
 
 export default function LogsDialog({ item, onClose }) {
     const open = !!item
+    const { inventory_types = [] } = usePage().props
+    const typeLabelMap = Object.fromEntries(inventory_types.map((t) => [t.id, t.name]))
 
     const [logs,       setLogs]       = useState([])
     const [meta,       setMeta]       = useState(null)
@@ -288,6 +341,7 @@ export default function LogsDialog({ item, onClose }) {
                             <SelectItem value="all">All actions</SelectItem>
                             <SelectItem value="CREATED">Created</SelectItem>
                             <SelectItem value="UPDATED">Updated</SelectItem>
+                            <SelectItem value="IMPORTED">Imported</SelectItem>
                             <SelectItem value="DELETED">Deleted</SelectItem>
                             <SelectItem value="ISSUED">Issued</SelectItem>
                         </SelectContent>
@@ -311,6 +365,7 @@ export default function LogsDialog({ item, onClose }) {
                                 key={log.id}
                                 log={log}
                                 isLast={i === logs.length - 1}
+                                typeLabelMap={typeLabelMap}
                             />
                         ))
                     )}

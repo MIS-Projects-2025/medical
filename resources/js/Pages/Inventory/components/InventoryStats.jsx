@@ -1,4 +1,4 @@
-import { Package, Pill, Wrench, AlertTriangle, XCircle, Clock } from 'lucide-react'
+import { Package, Pill, Wrench, AlertTriangle, XCircle } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 
@@ -45,18 +45,11 @@ const STAT_CARDS = [
         color: 'text-red-600 dark:text-red-400',
         bg:    'bg-red-50 dark:bg-red-950/30',
     },
-    {
-        key:   'expiring',
-        label: 'Expiring Soon',
-        icon:  Clock,
-        color: 'text-pink-600 dark:text-pink-400',
-        bg:    'bg-pink-50 dark:bg-pink-950/30',
-    },
 ]
 
 export default function InventoryStats({ stats, loading }) {
     return (
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             {STAT_CARDS.map(({ key, label, icon: Icon, color, bg }) => (
                 <Card key={key}>
                     <CardContent className="px-4 py-3">
@@ -70,7 +63,6 @@ export default function InventoryStats({ stats, loading }) {
                             </>
                         ) : (
                             <>
-                                {/* Icon + count on one row */}
                                 <div className="flex items-center gap-2 mb-1">
                                     <div className={`rounded-md p-1 ${bg} shrink-0`}>
                                         <Icon className={`w-3.5 h-3.5 ${color}`} />
@@ -79,7 +71,6 @@ export default function InventoryStats({ stats, loading }) {
                                         {stats[key] ?? 0}
                                     </p>
                                 </div>
-                                {/* Label below */}
                                 <p className="text-xs text-muted-foreground leading-snug">
                                     {label}
                                 </p>

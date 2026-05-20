@@ -23,18 +23,18 @@ class MdclInvent extends Model
         'brand',
         'item_name',
         'qty',
+        'required_stock',
         'date_inserted',
-        'expiration',
     ];
 
     /**
      * The attributes that should be cast.
      */
     protected $casts = [
-        'med_type'      => 'integer',
-        'qty'           => 'integer',
-        'date_inserted' => 'datetime',
-        'expiration'    => 'datetime',
+        'med_type'       => 'integer',
+        'qty'            => 'integer',
+        'required_stock' => 'integer',
+        'date_inserted'  => 'datetime',
     ];
 
     /**
@@ -83,17 +83,6 @@ class MdclInvent extends Model
     public function scopeEquipment($query)
     {
         return $query->where('med_type', self::TYPE_EQUIPMENT);
-    }
-
-    /**
-     * Scope: items that have not yet expired (or have no expiration).
-     */
-    public function scopeNotExpired($query)
-    {
-        return $query->where(function ($q) {
-            $q->whereNull('expiration')
-                ->orWhere('expiration', '>', now());
-        });
     }
 
     // -------------------------------------------------------------------------

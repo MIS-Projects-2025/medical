@@ -87,10 +87,9 @@ export function useInventoryMutations({ setRows, onRefreshStats }) {
     // ── Update ──────────────────────────────────────────────────────────────
     const updateItem = useCallback(async (id, formData) => {
         setSaving(true)
-        setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...formData } : r)))
         try {
             const { data: updated } = await axios.put(route('inventory.update', { id }), formData)
-            setRows((prev) => prev.map((r) => (r.id === id ? updated : r)))
+            setRows?.((prev) => prev.map((r) => (r.id === id ? updated : r)))
             onRefreshStats?.()
             toast.success('Item updated.')
             return updated
@@ -102,9 +101,29 @@ export function useInventoryMutations({ setRows, onRefreshStats }) {
         }
     }, [setRows, onRefreshStats])
 
+    // ── Bulk Update (bulk edit mode) ─────────────────────────────────────────
+    const bulkUpdateItems = useCallback(async (items) => {
+        setSaving(true)
+        try {
+            const { data } = await axios.post(route('inventory.bulkUpdate'), { items })
+            onRefreshStats?.()
+            if (data.errors?.length) {
+                toast.warning(`${data.updated} updated, ${data.errors.length} failed.`)
+            } else {
+                toast.success(`${data.updated} item(s) updated.`)
+            }
+            return data
+        } catch (err) {
+            toast.error(extractApiError(err))
+            throw err
+        } finally {
+            setSaving(false)
+        }
+    }, [onRefreshStats])
+
     // ── Delete ──────────────────────────────────────────────────────────────
     const deleteItem = useCallback(async (id) => {
-        setRows((prev) => prev.filter((r) => r.id !== id))
+        setRows?.((prev) => prev.filter((r) => r.id !== id))
         try {
             await axios.delete(route('inventory.destroy', { id }))
             onRefreshStats?.()
@@ -117,7 +136,7 @@ export function useInventoryMutations({ setRows, onRefreshStats }) {
 
     // ── Bulk Delete ──────────────────────────────────────────────────────────
     const bulkDelete = useCallback(async (ids) => {
-        setRows((prev) => prev.filter((r) => !ids.includes(r.id)))
+        setRows?.((prev) => prev.filter((r) => !ids.includes(r.id)))
         try {
             const { data } = await axios.delete(route('inventory.bulkDelete'), { data: { ids } })
             onRefreshStats?.()
@@ -153,5 +172,5 @@ export function useInventoryMutations({ setRows, onRefreshStats }) {
         }
     }, [onRefreshStats])
 
-    return { saving, uploading, createItem, updateItem, deleteItem, bulkDelete, bulkUpload }
+    return { saving, uploading, createItem, updateItem, bulkUpdateItems, deleteItem, bulkDelete, bulkUpload }
 }

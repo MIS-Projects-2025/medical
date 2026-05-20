@@ -8,8 +8,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 class InventoryRepository
 {
     private const ALLOWED_SORTS = [
-        'id', 'item_name', 'brand', 'uom', 'qty',
-        'med_type', 'expiration', 'date_inserted',
+        'id', 'item_name', 'brand', 'uom', 'qty', 'med_type', 'date_inserted',
     ];
 
     // ── Queries ──────────────────────────────────────────────────────────────
@@ -34,23 +33,19 @@ class InventoryRepository
         }
 
         // Stock status filter
+        // Low = required_stock IS set AND qty <= 50% of it
+        // OK  = qty > 0 AND (no required_stock OR qty > 50% of it)
         if (!empty($filters['stock_status'])) {
             match ($filters['stock_status']) {
                 'out'  => $query->where('qty', '=', 0),
-                'low'  => $query->where('qty', '>', 0)->where('qty', '<=', 10),
-                'ok'   => $query->where('qty', '>', 10),
-                default => null,
-            };
-        }
-
-        // Expiry filter
-        if (!empty($filters['expiry'])) {
-            match ($filters['expiry']) {
-                'expired'     => $query->whereNotNull('expiration')
-                                       ->where('expiration', '<=', now()),
-                'not_expired' => $query->notExpired(),
-                'expiring'    => $query->whereNotNull('expiration')
-                                       ->whereBetween('expiration', [now(), now()->addDays(30)]),
+                'low'  => $query->where('qty', '>', 0)
+                                ->whereNotNull('required_stock')
+                                ->whereRaw('qty <= FLOOR(required_stock * 0.5)'),
+                'ok'   => $query->where('qty', '>', 0)
+                                ->where(fn ($q) => $q
+                                    ->whereNull('required_stock')
+                                    ->orWhereRaw('qty > FLOOR(required_stock * 0.5)')
+                                ),
                 default => null,
             };
         }
@@ -97,7 +92,7 @@ class InventoryRepository
     }
 
     /**
-     * Upsert a batch of rows from CSV import.
+     * Upsert a batch of rows from a bulk import.
      * Rows with an existing `id` are updated; all others are created.
      */
     public function upsertBatch(array $rows): array
@@ -137,11 +132,8 @@ class InventoryRepository
             'medicine'  => MdclInvent::medicines()->count(),
             'supply'    => MdclInvent::supplies()->count(),
             'equipment' => MdclInvent::equipment()->count(),
-            'low_stock' => MdclInvent::where('qty', '>', 0)->where('qty', '<=', 10)->count(),
+            'low_stock' => MdclInvent::where('qty', '>', 0)->whereNotNull('required_stock')->whereRaw('qty <= FLOOR(required_stock * 0.5)')->count(),
             'out_stock' => MdclInvent::where('qty', '=', 0)->count(),
-            'expiring'  => MdclInvent::whereNotNull('expiration')
-                                     ->whereBetween('expiration', [now(), now()->addDays(30)])
-                                     ->count(),
         ];
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Exports;
 
+use App\Models\InventoryType;
 use App\Models\MdclInvent;
 use Maatwebsite\Excel\Concerns\FromQuery;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
@@ -14,8 +15,7 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 class InventoryExport implements FromQuery, WithHeadings, WithMapping, WithStyles, WithTitle, ShouldAutoSize
 {
     private const ALLOWED_SORTS = [
-        'id', 'item_name', 'brand', 'uom', 'qty',
-        'med_type', 'expiration', 'date_inserted',
+        'id', 'item_name', 'brand', 'uom', 'qty', 'med_type', 'date_inserted',
     ];
 
     public function __construct(private readonly array $filters = []) {}
@@ -46,16 +46,6 @@ class InventoryExport implements FromQuery, WithHeadings, WithMapping, WithStyle
             };
         }
 
-        if (!empty($this->filters['expiry'])) {
-            match ($this->filters['expiry']) {
-                'expired'     => $query->whereNotNull('expiration')->where('expiration', '<=', now()),
-                'not_expired' => $query->whereNotNull('expiration')->where('expiration', '>', now()),
-                'expiring'    => $query->whereNotNull('expiration')
-                                       ->whereBetween('expiration', [now(), now()->addDays(30)]),
-                default => null,
-            };
-        }
-
         $sortBy  = in_array($this->filters['sort_by'] ?? '', self::ALLOWED_SORTS, true)
                    ? $this->filters['sort_by'] : 'item_name';
         $sortDir = ($this->filters['sort_dir'] ?? 'asc') === 'desc' ? 'desc' : 'asc';
@@ -65,12 +55,15 @@ class InventoryExport implements FromQuery, WithHeadings, WithMapping, WithStyle
 
     public function headings(): array
     {
-        return ['#', 'Item Name', 'Type', 'Brand', 'UOM', 'Qty', 'Expiration', 'Date Added'];
+        return ['#', 'Item Name', 'Type', 'Brand', 'UOM', 'Qty', 'Date Added'];
     }
 
     public function map($item): array
     {
-        static $typeLabels = [1 => 'Medicine', 2 => 'Supply', 3 => 'Equipment'];
+        static $typeLabels = null;
+        if ($typeLabels === null) {
+            $typeLabels = InventoryType::idToNameMap();
+        }
 
         return [
             $item->id,
@@ -79,7 +72,6 @@ class InventoryExport implements FromQuery, WithHeadings, WithMapping, WithStyle
             $item->brand              ?? '—',
             $item->uom                ?? '—',
             $item->qty,
-            $item->expiration?->format('Y-m-d')    ?? '—',
             $item->date_inserted?->format('Y-m-d') ?? '—',
         ];
     }

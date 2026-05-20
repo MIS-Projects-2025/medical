@@ -84,7 +84,6 @@ function ColumnReference() {
                                         <td className="pr-3">Biogesic</td>
                                         <td className="pr-3">tablet</td>
                                         <td className="pr-3">200</td>
-                                        <td className="pr-3">2027-06-30</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -232,7 +231,7 @@ export default function BulkUploadModal({ open, onOpenChange, onUpload, uploadin
                             <div className="flex flex-col items-center gap-2 text-muted-foreground">
                                 <UploadCloud className="h-10 w-10" />
                                 <p className="text-sm font-medium">
-                                    Drop your CSV here, or{' '}
+                                    Drop your file here, or{' '}
                                     <span className="text-primary">browse</span>
                                 </p>
                                 <p className="text-xs">Excel (.xlsx, .xls) or CSV · max {MAX_MB} MB</p>
@@ -273,6 +272,9 @@ export default function BulkUploadModal({ open, onOpenChange, onUpload, uploadin
                                 <p>
                                     <strong>{result.created}</strong> created,{' '}
                                     <strong>{result.updated}</strong> updated
+                                    {result.session_id && (
+                                        <span className="text-muted-foreground text-xs ml-1">(Session #{result.session_id})</span>
+                                    )}
                                 </p>
                                 {result.errors?.length > 0 && (
                                     <ul className="list-disc pl-4 text-xs space-y-0.5 mt-1">

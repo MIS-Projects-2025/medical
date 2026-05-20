@@ -3,12 +3,10 @@ import { getStockStatus, STOCK_STATUS_CONFIG } from '../helpers/inventoryHelpers
 
 /**
  * Displays a colored badge based on quantity.
- * out = 0 → destructive/red
- * low = 1–10 → warning/amber
- * ok  = 11+ → success/green
+ * Uses requiredStock as the low-stock threshold when provided; falls back to 10.
  */
-export default function StockBadge({ qty, showQty = false, className }) {
-    const status = getStockStatus(qty)
+export default function StockBadge({ qty, requiredStock = null, showQty = false, className }) {
+    const status = getStockStatus(qty, requiredStock)
     const config = STOCK_STATUS_CONFIG[status]
 
     return (

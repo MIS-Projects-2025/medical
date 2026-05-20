@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\InventoryType;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -41,6 +42,12 @@ class HandleInertiaRequests extends Middleware
             ],
             'appName' => config('app.name'), // This pulls from .env
             'display_name' => env('APP_DISPLAY_NAME', ''),
+            // Active inventory types — available on every page so type selects always work
+            'inventory_types' => fn() => InventoryType::active()
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->get(['id', 'name', 'color'])
+                ->toArray(),
         ];
     }
 }

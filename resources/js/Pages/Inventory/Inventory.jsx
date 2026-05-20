@@ -1,21 +1,26 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { Head } from '@inertiajs/react'
-import { Plus, UploadCloud, RefreshCw, Maximize2, Minimize2, Download, ChevronDown, FlaskConical, Package, Wrench, LayoutList } from 'lucide-react'
+import { Plus, UploadCloud, RefreshCw, Maximize2, Minimize2, Download, ChevronDown, FlaskConical, Package, Wrench, LayoutList, History, TrendingUp } from 'lucide-react'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Button }       from '@/components/ui/button'
 import { Pagination }   from '@/Components/Pagination'
+import {
+    Tooltip, TooltipContent, TooltipTrigger, TooltipProvider,
+} from '@/components/ui/tooltip'
 import {
     DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
     DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuItem,
 } from '@/components/ui/dropdown-menu'
 
-import InventoryStats     from './components/InventoryStats'
-import InventoryFilters   from './components/InventoryFilters'
-import InventoryTable     from './components/InventoryTable'
-import InventoryFormSheet from './components/InventoryFormSheet'
-import BulkUploadModal    from './components/BulkUploadModal'
-import BulkActionsBar     from './components/BulkActionsBar'
-import LogsDialog         from './components/LogsDialog'
+import InventoryStats        from './components/InventoryStats'
+import InventoryFilters      from './components/InventoryFilters'
+import InventoryTable        from './components/InventoryTable'
+import InventoryFormSheet    from './components/InventoryFormSheet'
+import BulkUploadModal       from './components/BulkUploadModal'
+import BulkActionsBar        from './components/BulkActionsBar'
+import LogsDialog                from './components/LogsDialog'
+import UploadHistoryDialog       from './components/UploadHistoryDialog'
+import TransactionHistoryDialog  from './components/TransactionHistoryDialog'
 
 import { useDebounce }          from './hooks/useDebounce'
 import { useInventoryData, useInventoryStats, useInventoryMutations } from './hooks/useInventory'
@@ -26,7 +31,6 @@ const DEFAULT_FILTERS = {
     search:       '',
     med_type:     '',
     stock_status: '',
-    expiry:       '',
     sort_by:      'id',
     sort_dir:     'desc',
     per_page:     '15',
@@ -47,10 +51,12 @@ export default function Inventory() {
     const [selectedIds, setSelectedIds] = useState(new Set())
 
     // ── Modal / sheet state ───────────────────────────────────────────────────
-    const [sheetOpen,  setSheetOpen]  = useState(false)
-    const [editItem,   setEditItem]   = useState(null)
-    const [uploadOpen, setUploadOpen] = useState(false)
-    const [logsItem,   setLogsItem]   = useState(null)
+    const [sheetOpen,         setSheetOpen]         = useState(false)
+    const [editItem,          setEditItem]           = useState(null)
+    const [uploadOpen,        setUploadOpen]         = useState(false)
+    const [uploadHistoryOpen,      setUploadHistoryOpen]      = useState(false)
+    const [transactionHistoryOpen, setTransactionHistoryOpen] = useState(false)
+    const [logsItem,               setLogsItem]               = useState(null)
 
     // ── Fullscreen (native browser API) ──────────────────────────────────────
     const tableRef = useRef(null)
@@ -81,7 +87,7 @@ export default function Inventory() {
 
     const {
         saving, uploading,
-        createItem, updateItem, deleteItem, bulkDelete, bulkUpload,
+        createItem, updateItem, bulkUpdateItems, deleteItem, bulkDelete, bulkUpload,
     } = useInventoryMutations({
         rows,
         setRows: () => refetch(),
@@ -156,6 +162,11 @@ export default function Inventory() {
         refetch()
     }
 
+    const handleBulkUpdate = async (items) => {
+        await bulkUpdateItems(items)
+        refetch()
+    }
+
     const handleBulkDelete = async () => {
         const ids = [...selectedIds]
         if (!ids.length) return
@@ -175,11 +186,9 @@ export default function Inventory() {
         const params = new URLSearchParams()
         const f = effectiveFilters
         if (f.search)       params.set('search',       f.search)
-        // override med_type if a specific type is chosen from the dropdown
         const medType = overrideMedType ?? f.med_type
         if (medType)        params.set('med_type',     medType)
         if (f.stock_status) params.set('stock_status', f.stock_status)
-        if (f.expiry)       params.set('expiry',       f.expiry)
         if (f.sort_by)      params.set('sort_by',      f.sort_by)
         if (f.sort_dir)     params.set('sort_dir',     f.sort_dir)
         window.location.href = route('inventory.export') + (params.toString() ? '?' + params.toString() : '')
@@ -202,63 +211,106 @@ export default function Inventory() {
                         </p>
                     </div>
 
-                    <div className="flex items-center gap-2 flex-wrap">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => { refetch(); refreshStats() }}
-                            className="gap-1.5"
-                        >
-                            <RefreshCw className="h-3.5 w-3.5" />
-                            Refresh
-                        </Button>
+                    <TooltipProvider delayDuration={300}>
+                        <div className="flex items-center gap-1.5 flex-wrap">
 
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setUploadOpen(true)}
-                            className="gap-1.5"
-                        >
-                            <UploadCloud className="h-3.5 w-3.5" />
-                            Bulk Upload
-                        </Button>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        size="icon"
+                                        className="h-9 w-9"
+                                        onClick={() => { refetch(); refreshStats() }}
+                                    >
+                                        <RefreshCw className="h-4 w-4" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Refresh</TooltipContent>
+                            </Tooltip>
 
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="outline" size="sm" className="gap-1.5">
-                                    <Download className="h-3.5 w-3.5" />
-                                    Export
-                                    <ChevronDown className="h-3 w-3 opacity-60" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-44">
-                                <DropdownMenuLabel className="text-xs text-muted-foreground">Export as .xlsx</DropdownMenuLabel>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={() => handleExport(null)} className="gap-2">
-                                    <LayoutList className="h-3.5 w-3.5 text-muted-foreground" />
-                                    All Items
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={() => handleExport('1')} className="gap-2">
-                                    <FlaskConical className="h-3.5 w-3.5 text-blue-500" />
-                                    Medicine
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleExport('2')} className="gap-2">
-                                    <Package className="h-3.5 w-3.5 text-emerald-500" />
-                                    Supply
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleExport('3')} className="gap-2">
-                                    <Wrench className="h-3.5 w-3.5 text-orange-500" />
-                                    Equipment
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        size="icon"
+                                        className="h-9 w-9"
+                                        onClick={() => setTransactionHistoryOpen(true)}
+                                    >
+                                        <TrendingUp className="h-4 w-4" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Transaction History</TooltipContent>
+                            </Tooltip>
 
-                        <Button size="sm" onClick={openAdd} className="gap-1.5">
-                            <Plus className="h-4 w-4" />
-                            Add Item
-                        </Button>
-                    </div>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        size="icon"
+                                        className="h-9 w-9"
+                                        onClick={() => setUploadHistoryOpen(true)}
+                                    >
+                                        <History className="h-4 w-4" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Upload History</TooltipContent>
+                            </Tooltip>
+
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        size="icon"
+                                        className="h-9 w-9"
+                                        onClick={() => setUploadOpen(true)}
+                                    >
+                                        <UploadCloud className="h-4 w-4" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Bulk Upload</TooltipContent>
+                            </Tooltip>
+
+                            <DropdownMenu>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="outline" size="icon" className="h-9 w-9">
+                                                <Download className="h-4 w-4" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Export</TooltipContent>
+                                </Tooltip>
+                                <DropdownMenuContent align="end" className="w-44">
+                                    <DropdownMenuLabel className="text-xs text-muted-foreground">Export as .xlsx</DropdownMenuLabel>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem onClick={() => handleExport(null)} className="gap-2">
+                                        <LayoutList className="h-3.5 w-3.5 text-muted-foreground" />
+                                        All Items
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem onClick={() => handleExport('1')} className="gap-2">
+                                        <FlaskConical className="h-3.5 w-3.5 text-blue-500" />
+                                        Medicine
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleExport('2')} className="gap-2">
+                                        <Package className="h-3.5 w-3.5 text-emerald-500" />
+                                        Supply
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleExport('3')} className="gap-2">
+                                        <Wrench className="h-3.5 w-3.5 text-orange-500" />
+                                        Equipment
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+
+                            <Button size="sm" onClick={openAdd} className="gap-1.5 h-9">
+                                <Plus className="h-4 w-4" />
+                                Add Item
+                            </Button>
+
+                        </div>
+                    </TooltipProvider>
                 </div>
 
                 {/* ── Stats cards ── */}
@@ -316,6 +368,7 @@ export default function Inventory() {
                             onEdit={openEdit}
                             onDelete={handleDelete}
                             onUpdate={handleInlineUpdate}
+                            onBulkUpdate={handleBulkUpdate}
                             onViewLogs={setLogsItem}
                             saving={saving}
                         />
@@ -349,6 +402,18 @@ export default function Inventory() {
                 onOpenChange={setUploadOpen}
                 onUpload={handleBulkUpload}
                 uploading={uploading}
+            />
+
+            {/* ── Upload history dialog ── */}
+            <UploadHistoryDialog
+                open={uploadHistoryOpen}
+                onClose={() => setUploadHistoryOpen(false)}
+            />
+
+            {/* ── Transaction history dialog ── */}
+            <TransactionHistoryDialog
+                open={transactionHistoryOpen}
+                onClose={() => setTransactionHistoryOpen(false)}
             />
 
             {/* ── Floating bulk action bar ── */}

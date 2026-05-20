@@ -1,3 +1,4 @@
+import { usePage } from '@inertiajs/react'
 import { Search, X } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -5,7 +6,7 @@ import {
     Select, SelectTrigger, SelectValue,
     SelectContent, SelectItem,
 } from '@/components/ui/select'
-import { MED_TYPES } from '../helpers/inventoryHelpers'
+import { typesToSelectOptions } from '../helpers/inventoryHelpers'
 
 const STOCK_OPTIONS = [
     { value: '',    label: 'All Stock' },
@@ -14,19 +15,14 @@ const STOCK_OPTIONS = [
     { value: 'out', label: 'Out of Stock' },
 ]
 
-const EXPIRY_OPTIONS = [
-    { value: '',            label: 'All Items' },
-    { value: 'not_expired', label: 'Not Expired' },
-    { value: 'expiring',    label: 'Expiring (30d)' },
-    { value: 'expired',     label: 'Expired' },
-]
-
 export default function InventoryFilters({ filters, onChange, onReset }) {
+    const { inventory_types = [] } = usePage().props
+    const typeOptions = typesToSelectOptions(inventory_types)
+
     const hasActiveFilters =
         filters.search       !== '' ||
         filters.med_type     !== '' ||
-        filters.stock_status !== '' ||
-        filters.expiry       !== ''
+        filters.stock_status !== ''
 
     return (
         <div className="flex flex-col sm:flex-row gap-2 flex-wrap">
@@ -61,7 +57,7 @@ export default function InventoryFilters({ filters, onChange, onReset }) {
                     </SelectTrigger>
                     <SelectContent>
                         <SelectItem value="">All Types</SelectItem>
-                        {MED_TYPES.map((t) => (
+                        {typeOptions.map((t) => (
                             <SelectItem key={t.value} value={t.value}>
                                 {t.label}
                             </SelectItem>
@@ -81,25 +77,6 @@ export default function InventoryFilters({ filters, onChange, onReset }) {
                     </SelectTrigger>
                     <SelectContent>
                         {STOCK_OPTIONS.map((o) => (
-                            <SelectItem key={o.value} value={o.value}>
-                                {o.label}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-            </div>
-
-            {/* Expiry filter */}
-            <div className="w-full sm:w-44">
-                <Select
-                    value={filters.expiry}
-                    onValueChange={(v) => onChange('expiry', v)}
-                >
-                    <SelectTrigger>
-                        <SelectValue placeholder="All Items" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {EXPIRY_OPTIONS.map((o) => (
                             <SelectItem key={o.value} value={o.value}>
                                 {o.label}
                             </SelectItem>

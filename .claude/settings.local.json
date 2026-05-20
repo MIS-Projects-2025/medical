@@ -5,7 +5,12 @@
       "Bash(npm install:*)",
       "Bash(composer require:*)",
       "Bash(php artisan:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(xargs grep:*)",
+      "Bash(ls -lah /c/Users/telford.programmer/Desktop/Medical/database/migrations/2026*)",
+      "Bash(php -l app/Models/MdclInvent.php app/Models/UploadSession.php app/Traits/Loggable.php app/Repositories/InventoryRepository.php app/Services/InventoryService.php app/Services/MedicalLogService.php app/Repositories/MedicalLogRepository.php app/Http/Controllers/InventoryController.php app/Exports/InventoryExport.php)",
+      "Bash(php:*)",
+      "Bash(ls -1 /c/Users/telford.programmer/Desktop/Medical/database/migrations/*.php)"
     ]
   }
 }

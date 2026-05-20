@@ -1,6 +1,6 @@
 import { usePage } from "@inertiajs/react";
 import SidebarLink from "@/Components/sidebar/SidebarLink";
-import { LayoutDashboard, Package, ClipboardList, ScrollText } from "lucide-react";
+import { LayoutDashboard, Package, ClipboardList, ScrollText, Tags } from "lucide-react";
 
 export default function NavLinks({ isSidebarOpen }) {
     const { emp_data } = usePage().props;
@@ -30,6 +30,14 @@ export default function NavLinks({ isSidebarOpen }) {
                     href={route("issuance.index")}
                     label="Issuance"
                     icon={<ClipboardList className="w-5 h-5" />}
+                    isSidebarOpen={isSidebarOpen}
+                />
+            )}
+            {isStation39 && (
+                <SidebarLink
+                    href={route("inventory.types.index")}
+                    label="Item Types"
+                    icon={<Tags className="w-5 h-5" />}
                     isSidebarOpen={isSidebarOpen}
                 />
             )}
