@@ -4,14 +4,14 @@ import { usePage } from '@inertiajs/react'
 import {
     Sheet, SheetContent, SheetHeader,
     SheetTitle, SheetDescription, SheetFooter, SheetClose,
-} from '@/components/ui/sheet'
-import { Button }    from '@/components/ui/button'
-import { Input }     from '@/components/ui/input'
-import { Label }     from '@/components/ui/label'
+} from '@/Components/ui/sheet'
+import { Button }    from '@/Components/ui/button'
+import { Input }     from '@/Components/ui/input'
+import { Label }     from '@/Components/ui/label'
 import {
     Select, SelectTrigger, SelectValue,
     SelectContent, SelectItem,
-} from '@/components/ui/select'
+} from '@/Components/ui/select'
 import StockBadge from './StockBadge'
 import { typesToSelectOptions, emptyFormValues, itemToFormValues } from '../helpers/inventoryHelpers'
 import { cn } from '@/lib/utils'

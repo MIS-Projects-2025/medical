@@ -1,11 +1,11 @@
 import { usePage } from '@inertiajs/react'
 import { Search, X } from 'lucide-react'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
+import { Input } from '@/Components/ui/input'
+import { Button } from '@/Components/ui/button'
 import {
     Select, SelectTrigger, SelectValue,
     SelectContent, SelectItem,
-} from '@/components/ui/select'
+} from '@/Components/ui/select'
 import { typesToSelectOptions } from '../helpers/inventoryHelpers'
 
 const STOCK_OPTIONS = [

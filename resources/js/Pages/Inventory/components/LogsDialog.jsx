@@ -4,14 +4,14 @@ import { History, Search, X, Plus, Pencil, Trash2, PackageMinus, RotateCcw, Uplo
 import {
     Dialog, DialogContent, DialogHeader,
     DialogTitle, DialogDescription,
-} from '@/components/ui/dialog'
+} from '@/Components/ui/dialog'
 import { Badge }   from '@/Components/ui/badge'
-import { Input }   from '@/components/ui/input'
+import { Input }   from '@/Components/ui/input'
 import {
     Select, SelectTrigger, SelectValue,
     SelectContent, SelectItem,
-} from '@/components/ui/select'
-import { Skeleton } from '@/components/ui/skeleton'
+} from '@/Components/ui/select'
+import { Skeleton } from '@/Components/ui/skeleton'
 import { Pagination } from '@/Components/Pagination'
 import { useDebounce } from '../hooks/useDebounce'
 import { cn } from '@/lib/utils'

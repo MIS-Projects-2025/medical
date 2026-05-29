@@ -2,13 +2,13 @@ import { Package, User, CalendarDays, FileText, X } from 'lucide-react'
 import {
     Dialog, DialogContent, DialogHeader,
     DialogTitle, DialogDescription,
-} from '@/components/ui/dialog'
+} from '@/Components/ui/dialog'
 import { Badge }     from '@/Components/ui/badge'
-import { Separator } from '@/components/ui/separator'
+import { Separator } from '@/Components/ui/separator'
 import {
     Table, TableHeader, TableBody,
     TableHead, TableRow, TableCell,
-} from '@/components/ui/table'
+} from '@/Components/ui/table'
 
 const MED_TYPE_BADGE = {
     1: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-950/50 dark:text-blue-400',

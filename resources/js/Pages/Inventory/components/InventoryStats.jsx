@@ -1,6 +1,6 @@
 import { Package, Pill, Wrench, AlertTriangle, XCircle } from 'lucide-react'
-import { Card, CardContent } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
+import { Card, CardContent } from '@/Components/ui/card'
+import { Skeleton } from '@/Components/ui/skeleton'
 
 const STAT_CARDS = [
     {

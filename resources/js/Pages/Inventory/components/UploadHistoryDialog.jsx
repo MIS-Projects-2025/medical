@@ -4,11 +4,11 @@ import { History, Search, X, Upload, CheckCircle2, AlertCircle, ChevronRight, Ch
 import {
     Dialog, DialogContent, DialogHeader,
     DialogTitle, DialogDescription,
-} from '@/components/ui/dialog'
+} from '@/Components/ui/dialog'
 import { Badge }    from '@/Components/ui/badge'
-import { Button }   from '@/components/ui/button'
-import { Input }    from '@/components/ui/input'
-import { Skeleton } from '@/components/ui/skeleton'
+import { Button }   from '@/Components/ui/button'
+import { Input }    from '@/Components/ui/input'
+import { Skeleton } from '@/Components/ui/skeleton'
 import { Pagination } from '@/Components/Pagination'
 import { useDebounce } from '../hooks/useDebounce'
 import { cn } from '@/lib/utils'

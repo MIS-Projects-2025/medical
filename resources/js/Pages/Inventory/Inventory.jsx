@@ -2,15 +2,15 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import { Head } from '@inertiajs/react'
 import { Plus, UploadCloud, RefreshCw, Maximize2, Minimize2, Download, ChevronDown, FlaskConical, Package, Wrench, LayoutList, History, TrendingUp } from 'lucide-react'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
-import { Button }       from '@/components/ui/button'
+import { Button }       from '@/Components/ui/button'
 import { Pagination }   from '@/Components/Pagination'
 import {
     Tooltip, TooltipContent, TooltipTrigger, TooltipProvider,
-} from '@/components/ui/tooltip'
+} from '@/Components/ui/tooltip'
 import {
     DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
     DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuItem,
-} from '@/components/ui/dropdown-menu'
+} from '@/Components/ui/dropdown-menu'
 
 import InventoryStats        from './components/InventoryStats'
 import InventoryFilters      from './components/InventoryFilters'

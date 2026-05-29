@@ -4,16 +4,16 @@ import { ArrowUp, ArrowDown, ArrowUpDown, Pencil, SquarePen, Trash2, Save, X, Hi
 import {
     Table, TableHeader, TableBody,
     TableHead, TableRow, TableCell,
-} from '@/components/ui/table'
-import { Button }   from '@/components/ui/button'
-import { Input }    from '@/components/ui/input'
-import { Checkbox } from '@/components/ui/checkbox'
+} from '@/Components/ui/table'
+import { Button }   from '@/Components/ui/button'
+import { Input }    from '@/Components/ui/input'
+import { Checkbox } from '@/Components/ui/checkbox'
 import { Badge }    from '@/Components/ui/badge'
-import { Skeleton } from '@/components/ui/skeleton'
+import { Skeleton } from '@/Components/ui/skeleton'
 import {
     Select, SelectTrigger, SelectValue,
     SelectContent, SelectItem,
-} from '@/components/ui/select'
+} from '@/Components/ui/select'
 import StockBadge from './StockBadge'
 import {
     typesToSelectOptions, typesToColorMap,

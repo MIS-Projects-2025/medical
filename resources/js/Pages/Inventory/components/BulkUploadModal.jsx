@@ -3,11 +3,11 @@ import { UploadCloud, FileText, Download, CheckCircle2, AlertCircle, X, ChevronD
 import {
     Dialog, DialogContent, DialogHeader,
     DialogTitle, DialogDescription, DialogFooter,
-} from '@/components/ui/dialog'
-import { Button }   from '@/components/ui/button'
+} from '@/Components/ui/dialog'
+import { Button }   from '@/Components/ui/button'
 import { Badge }    from '@/Components/ui/badge'
-import { Progress } from '@/components/ui/progress'
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
+import { Progress } from '@/Components/ui/progress'
+import { Alert, AlertTitle, AlertDescription } from '@/Components/ui/alert'
 import { downloadExcelTemplate, TEMPLATE_COLUMNS } from '../helpers/inventoryHelpers'
 import { cn } from '@/lib/utils'
 

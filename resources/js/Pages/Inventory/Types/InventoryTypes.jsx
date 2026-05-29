@@ -3,22 +3,22 @@ import { Head, router } from '@inertiajs/react'
 import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, GripVertical } from 'lucide-react'
 import { toast } from 'sonner'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
-import { Button }   from '@/components/ui/button'
+import { Button }   from '@/Components/ui/button'
 import { Badge }    from '@/Components/ui/badge'
-import { Input }    from '@/components/ui/input'
-import { Label }    from '@/components/ui/label'
+import { Input }    from '@/Components/ui/input'
+import { Label }    from '@/Components/ui/label'
 import {
     Dialog, DialogContent, DialogHeader,
     DialogTitle, DialogDescription, DialogFooter,
-} from '@/components/ui/dialog'
+} from '@/Components/ui/dialog'
 import {
     Select, SelectTrigger, SelectValue,
     SelectContent, SelectItem,
-} from '@/components/ui/select'
+} from '@/Components/ui/select'
 import {
     Table, TableHeader, TableBody,
     TableHead, TableRow, TableCell,
-} from '@/components/ui/table'
+} from '@/Components/ui/table'
 import { extractApiError } from '../helpers/inventoryHelpers'
 
 const axios = window.axios

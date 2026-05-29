@@ -4,16 +4,16 @@ import { TrendingUp, Search, X, ArrowUp, ArrowDown, Minus, SlidersHorizontal, Ca
 import {
     Dialog, DialogContent, DialogHeader,
     DialogTitle, DialogDescription,
-} from '@/components/ui/dialog'
-import { Input }     from '@/components/ui/input'
+} from '@/Components/ui/dialog'
+import { Input }     from '@/Components/ui/input'
 import { Badge }     from '@/Components/ui/badge'
-import { Button }    from '@/components/ui/button'
-import { Skeleton }  from '@/components/ui/skeleton'
-import { Separator } from '@/components/ui/separator'
+import { Button }    from '@/Components/ui/button'
+import { Skeleton }  from '@/Components/ui/skeleton'
+import { Separator } from '@/Components/ui/separator'
 import {
     Select, SelectTrigger, SelectValue,
     SelectContent, SelectItem,
-} from '@/components/ui/select'
+} from '@/Components/ui/select'
 import { DatePicker } from '@/Components/ui/date-picker'
 import { Pagination }  from '@/Components/Pagination'
 import { useDebounce } from '../hooks/useDebounce'

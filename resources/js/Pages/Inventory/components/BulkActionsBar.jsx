@@ -1,5 +1,5 @@
 import { Trash2, X } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Button } from '@/Components/ui/button'
 
 /**
  * Sticky bar that appears at the bottom when rows are selected.

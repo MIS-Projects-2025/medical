@@ -2,10 +2,10 @@ import { Eye, Package } from 'lucide-react'
 import {
     Table, TableHeader, TableBody,
     TableHead, TableRow, TableCell,
-} from '@/components/ui/table'
-import { Button }  from '@/components/ui/button'
+} from '@/Components/ui/table'
+import { Button }  from '@/Components/ui/button'
 import { Badge }   from '@/Components/ui/badge'
-import { Skeleton } from '@/components/ui/skeleton'
+import { Skeleton } from '@/Components/ui/skeleton'
 
 function SkeletonRows() {
     return Array.from({ length: 8 }).map((_, i) => (
